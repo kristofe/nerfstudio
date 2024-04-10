@@ -41,7 +41,7 @@ from nerfstudio.data.scene_box import OrientedBox
 from nerfstudio.exporter import texture_utils, tsdf_utils
 from nerfstudio.exporter.exporter_utils import (
     collect_camera_poses, generate_point_cloud,
-    generate_spherical_harmonics_cloud, get_mesh_from_filename)
+    generate_spherical_harmonics_grid, get_mesh_from_filename)
 from nerfstudio.exporter.marching_cubes import \
     generate_mesh_with_multires_marching_cubes
 from nerfstudio.fields.sdf_field import SDFField  # noqa
@@ -92,8 +92,8 @@ def validate_pipeline(normal_method: str, normal_output_name: str, pipeline: Pip
 
 
 @dataclass
-class ExportSphericalHarmonicsCloud(Exporter):
-    """Export NeRF as a point cloud."""
+class ExportSphericalHarmonicsGrid(Exporter):
+    """Export NeRF as a grid of spherical harmonics"""
 
     num_points: int = 1000000
     """Number of points to generate. May result in less if outlier removal is used."""
@@ -145,25 +145,16 @@ class ExportSphericalHarmonicsCloud(Exporter):
         assert pipeline.datamanager.train_pixel_sampler is not None
         pipeline.datamanager.train_pixel_sampler.num_rays_per_batch = self.num_rays_per_batch
 
-        # Whether the normals should be estimated based on the sh cloud.
-        estimate_normals = self.normal_method == "open3d"
         crop_obb = None
         if self.obb_center is not None and self.obb_rotation is not None and self.obb_scale is not None:
             crop_obb = OrientedBox.from_params(self.obb_center, self.obb_rotation, self.obb_scale)
-        pcd = generate_spherical_harmonics_cloud(
+        pcd = generate_spherical_harmonics_grid(
             pipeline=pipeline,
-            num_points=self.num_points,
-            remove_outliers=self.remove_outliers,
-            reorient_normals=self.reorient_normals,
-            estimate_normals=estimate_normals,
             rgb_output_name=self.rgb_output_name,
-            depth_output_name=self.depth_output_name,
-            normal_output_name=self.normal_output_name if self.normal_method == "model_output" else None,
             use_bounding_box=self.use_bounding_box,
             bounding_box_min=self.bounding_box_min,
             bounding_box_max=self.bounding_box_max,
             crop_obb=crop_obb,
-            std_ratio=self.std_ratio,
         )
         if self.save_world_frame:
             # apply the inverse dataparser transform to the sh cloud
@@ -698,7 +689,7 @@ class ExportGaussianSplat(Exporter):
 
 Commands = tyro.conf.FlagConversionOff[
     Union[
-        Annotated[ExportSphericalHarmonicsCloud, tyro.conf.subcommand(name="spherical-harmonics-cloud")],
+        Annotated[ExportSphericalHarmonicsGrid, tyro.conf.subcommand(name="spherical-harmonics-grid")],
         Annotated[ExportPointCloud, tyro.conf.subcommand(name="pointcloud")],
         Annotated[ExportTSDFMesh, tyro.conf.subcommand(name="tsdf")],
         Annotated[ExportPoissonMesh, tyro.conf.subcommand(name="poisson")],
@@ -722,7 +713,7 @@ if __name__ == "__main__":
     import sys
     print(os.getcwd())  
     os.chdir("experiments")
-    sys.argv = [sys.argv[0], "spherical-harmonics-cloud",
+    sys.argv = [sys.argv[0], "spherical-harmonics-grid",
                 "--load-config", "outputs/unnamed/nerfacto/2024-04-05_140210/config.yml",
                 "--output-dir", "exports/pcd/",
                 "--num-points",  "1000000",
