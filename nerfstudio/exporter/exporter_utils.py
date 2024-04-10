@@ -111,15 +111,6 @@ def generate_spherical_harmonics_grid(
     rgbs = []
     view_directions = []
 
-    CONSOLE.print("HELLO WORLD")
-    CONSOLE.print("HELLO WORLD")
-    CONSOLE.print("HELLO WORLD")
-    CONSOLE.print("HELLO WORLD")
-    CONSOLE.print("HELLO WORLD")
-    CONSOLE.print("HELLO WORLD")
-    from nerfstudio.cameras.rays import RaySamples
-    from nerfstudio.model_components.ray_samplers import UniformSampler
-
     num_directions = 1024
     results = []
     grid_res = 16
