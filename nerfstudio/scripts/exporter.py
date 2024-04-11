@@ -95,17 +95,16 @@ def validate_pipeline(normal_method: str, normal_output_name: str, pipeline: Pip
 class ExportSphericalHarmonicsGrid(Exporter):
     """Export NeRF as a grid of spherical harmonics"""
 
-    num_points: int = 1000000
-    """Number of points to generate. May result in less if outlier removal is used."""
-    remove_outliers: bool = True
+    """Number of directions to sample per grid point for Spherical Harmonics calculation."""
+    num_directions: int = 1024
+    """Number of grid points per axis for the SH grid."""
+    grid_res: int = 16
     """Remove outliers from the SH cloud."""
-    reorient_normals: bool = True
-    """Reorient sh cloud normals based on view direction."""
     normal_method: Literal["open3d", "model_output"] = "model_output"
     """Method to estimate normals with."""
     normal_output_name: str = "normals"
     """Name of the normal output."""
-    depth_output_name: str = "depth"
+    #depth_output_name: str = "depth"
     """Name of the depth output."""
     rgb_output_name: str = "rgb"
     """Name of the RGB output."""
@@ -130,6 +129,9 @@ class ExportSphericalHarmonicsGrid(Exporter):
     """If set, saves the sh cloud in the same frame as the original dataset. Otherwise, uses the
     scaled and reoriented coordinate space expected by the NeRF models."""
 
+    num_points: int = 1000000 #Ignored but kept because it is part of the GUI generated command line for point clouds export
+    remove_outliers: bool = False #Ignored but kept because it is part of the GUI generated command line for point clouds export
+    
     def main(self) -> None:
         """Export sh cloud."""
 
@@ -150,6 +152,8 @@ class ExportSphericalHarmonicsGrid(Exporter):
             crop_obb = OrientedBox.from_params(self.obb_center, self.obb_rotation, self.obb_scale)
         pcd = generate_spherical_harmonics_grid(
             pipeline=pipeline,
+            num_directions=self.num_directions,
+            grid_res=self.grid_res,
             rgb_output_name=self.rgb_output_name,
             use_bounding_box=self.use_bounding_box,
             bounding_box_min=self.bounding_box_min,

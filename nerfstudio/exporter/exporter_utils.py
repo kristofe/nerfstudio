@@ -82,6 +82,8 @@ def get_mesh_from_filename(filename: str, target_num_faces: Optional[int] = None
 
 def generate_spherical_harmonics_grid(
     pipeline: Pipeline,
+    num_directions: int = 1024,
+    grid_res: int = 16,
     rgb_output_name: str = "rgb",
     use_bounding_box: bool = True,
     bounding_box_min: Optional[Tuple[float, float, float]] = None,
@@ -110,10 +112,7 @@ def generate_spherical_harmonics_grid(
     )
     rgbs = []
     view_directions = []
-
-    num_directions = 1024
     results = []
-    grid_res = 16
     linepoints = torch.linspace(-1, 1, grid_res, device=pipeline.device)
     x,y,z = torch.meshgrid(linepoints, linepoints, linepoints, indexing='ij')
     positions = torch.stack((x.flatten(), y.flatten(), z.flatten()), dim=1)
