@@ -453,9 +453,7 @@ def sample_sphere_low_discrepancy(device : torch.device, num_samples : int = 409
         samples[ii, 0] = math.cos(phi)*math.sin(theta)
         samples[ii, 1] = math.sin(phi)*math.sin(theta)
         samples[ii, 2] = math.cos(theta)
-    samples2 = samples.clone()
-    samples2[:, 2] *= -1
-    samples = torch.cat((samples, samples2), 0)
+    samples = torch.cat((samples, samples*-1), 0)
     return samples
 
 
@@ -481,6 +479,53 @@ def sample_sphere_monte_carlo(device : torch.device, num_samples : int = 4096):
         samples[i, 1] = a
         samples[i, 2] = math.sin(b) * sinTheta
     return samples
+
+'''
+__host__ __device__ __forceinline__ float Project(const vec3& n, const int L, const int M)
+{
+	switch (L)
+	{
+	case 0:
+		return 0.2820947917738781f;
+	case 1:
+	{
+		switch (M)
+		{
+		case -1:	return 0.4886025119029199f * n.y;
+		case 0:		return 0.4886025119029199f * n.z;
+		case 1:		return 0.4886025119029199f * n.x;
+		}
+	}
+	case 2:
+	{
+		switch (M)
+		{
+		case -2:	return 1.0925484305920792f * n.x * n.y;
+		case -1:	return 1.0925484305920792f * n.y * n.z;
+		case 0:		return 0.3153915652525200f * (-sqr(n.x) - sqr(n.y) + 2 * sqr(n.z));
+		case 1:		return 1.0925484305920792f * n.z * n.x;
+		case 2:		return 0.5462742152960396f * (sqr(n.x) - sqr(n.y));
+		}
+	}
+	case 3:
+	{
+		switch (M)
+		{
+		case -3: return 0.5900435899266435f * (3 * sqr(n.x) - sqr(n.y)) * n.y;
+		case -2: return 2.890611442640554f * n.x * n.y * n.z;
+		case -1: return 0.4570457994644658f * n.y * (4 * sqr(n.z) - sqr(n.x) - sqr(n.y));
+		case 0: return 0.3731763325901154f * n.z * (2 * sqr(n.z) - 3 * sqr(n.x) - 3 * sqr(n.y));
+		case 1: return 0.4570457994644658f * n.x * (4 * sqr(n.z) - sqr(n.x) - sqr(n.y));
+		case 2: return 1.445305721320277f * (sqr(n.x) - sqr(n.y)) * n.z;
+		case 3: return 0.5900435899266435f * (sqr(n.x) - 4 * sqr(n.y)) * n.x;
+		}
+	}
+	}
+	printf("Invalid SH index L = %i, M = %i\n", L, M);
+	CudaAssert(false);
+}
+
+'''
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
