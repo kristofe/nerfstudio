@@ -480,58 +480,83 @@ def sample_sphere_monte_carlo(device : torch.device, num_samples : int = 4096):
         samples[i, 2] = math.sin(b) * sinTheta
     return samples
 
-'''
-__host__ __device__ __forceinline__ float Project(const vec3& n, const int L, const int M)
-{
-	switch (L)
-	{
-	case 0:
-		return 0.2820947917738781f;
-	case 1:
-	{
-		switch (M)
-		{
-		case -1:	return 0.4886025119029199f * n.y;
-		case 0:		return 0.4886025119029199f * n.z;
-		case 1:		return 0.4886025119029199f * n.x;
-		}
-	}
-	case 2:
-	{
-		switch (M)
-		{
-		case -2:	return 1.0925484305920792f * n.x * n.y;
-		case -1:	return 1.0925484305920792f * n.y * n.z;
-		case 0:		return 0.3153915652525200f * (-sqr(n.x) - sqr(n.y) + 2 * sqr(n.z));
-		case 1:		return 1.0925484305920792f * n.z * n.x;
-		case 2:		return 0.5462742152960396f * (sqr(n.x) - sqr(n.y));
-		}
-	}
-	case 3:
-	{
-		switch (M)
-		{
-		case -3: return 0.5900435899266435f * (3 * sqr(n.x) - sqr(n.y)) * n.y;
-		case -2: return 2.890611442640554f * n.x * n.y * n.z;
-		case -1: return 0.4570457994644658f * n.y * (4 * sqr(n.z) - sqr(n.x) - sqr(n.y));
-		case 0: return 0.3731763325901154f * n.z * (2 * sqr(n.z) - 3 * sqr(n.x) - 3 * sqr(n.y));
-		case 1: return 0.4570457994644658f * n.x * (4 * sqr(n.z) - sqr(n.x) - sqr(n.y));
-		case 2: return 1.445305721320277f * (sqr(n.x) - sqr(n.y)) * n.z;
-		case 3: return 0.5900435899266435f * (sqr(n.x) - 4 * sqr(n.y)) * n.x;
-		}
-	}
-	}
-	printf("Invalid SH index L = %i, M = %i\n", L, M);
-	CudaAssert(false);
-}
+def project_sh(L : int , M : int, n : torch.FloatTensor):
+    '''
+    __host__ __device__ __forceinline__ float Project(const vec3& n, const int L, const int M)
+    {
+        switch (L)
+        {
+        case 0:
+            return 0.2820947917738781f;
+        case 1:
+        {
+            switch (M)
+            {
+            case -1:	return 0.4886025119029199f * n.y;
+            case 0:		return 0.4886025119029199f * n.z;
+            case 1:		return 0.4886025119029199f * n.x;
+            }
+        }
+        case 2:
+        {
+            switch (M)
+            {
+            case -2:	return 1.0925484305920792f * n.x * n.y;
+            case -1:	return 1.0925484305920792f * n.y * n.z;
+            case 0:		return 0.3153915652525200f * (-sqr(n.x) - sqr(n.y) + 2 * sqr(n.z));
+            case 1:		return 1.0925484305920792f * n.z * n.x;
+            case 2:		return 0.5462742152960396f * (sqr(n.x) - sqr(n.y));
+            }
+        }
+        case 3:
+        {
+            switch (M)
+            {
+            case -3: return 0.5900435899266435f * (3 * sqr(n.x) - sqr(n.y)) * n.y;
+            case -2: return 2.890611442640554f * n.x * n.y * n.z;
+            case -1: return 0.4570457994644658f * n.y * (4 * sqr(n.z) - sqr(n.x) - sqr(n.y));
+            case 0: return 0.3731763325901154f * n.z * (2 * sqr(n.z) - 3 * sqr(n.x) - 3 * sqr(n.y));
+            case 1: return 0.4570457994644658f * n.x * (4 * sqr(n.z) - sqr(n.x) - sqr(n.y));
+            case 2: return 1.445305721320277f * (sqr(n.x) - sqr(n.y)) * n.z;
+            case 3: return 0.5900435899266435f * (sqr(n.x) - 4 * sqr(n.y)) * n.x;
+            }
+        }
+        }
+        printf("Invalid SH index L = %i, M = %i\n", L, M);
+        CudaAssert(false);
+    }
 
-'''
+    '''
+    def sqr(x):
+        return x*x
+    ix = 0; iy = 1; iz = 2
+    if(L==0):
+        return 0.2820947917738781
+    elif(L==1):
+        if(M==-1):	return 0.4886025119029199 * n[:,iy]
+        elif(M==0):	return 0.4886025119029199 * n[:,iz]
+        elif(M==1):	return 0.4886025119029199 * n[:,ix]
+    elif(L==2):
+        if(M==-2):	return 1.0925484305920792 * n[:,ix] * n[:,iy]
+        elif(M==-1):return 1.0925484305920792 * n[:,iy] * n[:,iz]
+        elif(M==0):	return 0.3153915652525200 * (-sqr(n[:,ix]) - sqr(n[:,iy]) + 2 * sqr(n[:,iz]))
+        elif(M==1):	return 1.0925484305920792 * n[:,iz] *n[:,ix] 
+        elif(M==2):	return 0.5462742152960396 * (sqr(n[:,ix]) - sqr(n[:,iy]))
+    elif(L==3):
+        if(M==-3): return 0.5900435899266435 * (3 * sqr(n[:,ix]) - sqr(n[:,iy])) * n[:,iy]
+        elif(M==-2): return 2.890611442640554 * n[:,ix] * n[:,iy] * n[:,iz]
+        elif(M==-1): return 0.4570457994644658 * n[:,iy] * (4 * sqr(n[:,iz]) - sqr(n[:,ix]) - sqr(n[:,iy]))
+        elif(M==0): return 0.3731763325901154 * n[:,iz] * (2 * sqr(n[:,iz]) - 3 * sqr(n[:,ix]) - 3 * sqr(n[:,iy]))
+        elif(M==1): return 0.4570457994644658 * n[:,ix] * (4 * sqr(n[:,iz]) - sqr(n[:,ix]) - sqr(n[:,iy]))
+        elif(M==2): return 1.445305721320277 * (sqr(n[:,ix]) - sqr(n[:,iy])) * n[:,iz]
+        elif(M==3): return 0.5900435899266435 * (sqr(n[:,ix]) - 4 * sqr(n[:,iy])) * n[:,ix]
+    print("Invalid SH index L = %i, M = %i\n", L, M)
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
-    samples = sample_sphere_low_discrepancy(torch.device('cpu'), 500)
-    #samples = sample_sphere_monte_carlo(torch.device('cpu'), 500)
+    samples = sample_sphere_low_discrepancy(torch.device('cpu'), 1000)
+    #samples = sample_sphere_monte_carlo(torch.device('cpu'), 1000)
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.scatter(samples[:,0], samples[:,1], samples[:,2])
