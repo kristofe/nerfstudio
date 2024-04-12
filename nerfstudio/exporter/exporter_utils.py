@@ -429,3 +429,65 @@ def collect_camera_poses(pipeline: VanillaPipeline) -> Tuple[List[Dict[str, Any]
     eval_frames = collect_camera_poses_for_dataset(eval_dataset)
 
     return train_frames, eval_frames
+
+
+def sample_sphere_low_discrepancy(device : torch.device, num_samples : int = 4096):
+    #Capitulum Sampling
+    import math
+    '''
+    CapPoint[I_, maxI_] := Block[{i = I, maxi = maxI}, 
+        theta = ArcCos[1 - i / maxI];
+        phi = \[Phi]*i;
+        {Cos[phi]*Sin[theta], Sin[phi]*Sin[theta], Cos[theta]}];
+    samples = Map[CapPoint[#, 500] &, Range[1, 500]];
+    samples = Flatten[{samples, -samples}, 1];
+    ListPointPlot3D[samples, BoxRatios -> {1, 1, 1.}]
+    '''
+    Phi = 1.6180339887
+    # YES THIS CAN BE VECTORIZED... FIRST LETS MAKE SURE IT IS CORRECT!!!!!
+    samples = torch.zeros(num_samples, 3, device = device)
+    for i in range(1,num_samples + 1):
+        ii = i -1
+        theta = math.acos(1 - i / num_samples)
+        phi = Phi*i
+        samples[ii, 0] = math.cos(phi)*math.sin(theta)
+        samples[ii, 1] = math.sin(phi)*math.sin(theta)
+        samples[ii, 2] = math.cos(theta)
+    samples2 = samples.clone()
+    samples2[:, 2] *= -1
+    samples = torch.cat((samples, samples2), 0)
+    return samples
+
+
+def sample_sphere_monte_carlo(device : torch.device, num_samples : int = 4096):
+    '''
+    xi = RandomReal[{0, 1}, {1000, 3}];
+    samples = Map[Block[{x = #},
+        a = x[[1]] * 2 - 1;
+        b = x[[2]]* 2*\[Pi];
+        sinTheta = Sqrt[1 - a*a];
+        {Cos[b]*sinTheta, a, Sin[b]*sinTheta}] &, xi];
+    ListPointPlot3D[samples, BoxRatios -> {1, 1, 1}]
+    '''
+    import math
+    xi = torch.rand((num_samples, 3), device = device)
+    samples = torch.zeros(num_samples, 3, device = device)
+    for i in range(num_samples):
+        x = xi[i]
+        a = x[0] * 2 - 1
+        b = x[1] * 2 * math.pi
+        sinTheta = math.sqrt(1 - a*a)
+        samples[i, 0] = math.cos(b) * sinTheta
+        samples[i, 1] = a
+        samples[i, 2] = math.sin(b) * sinTheta
+    return samples
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+
+    samples = sample_sphere_low_discrepancy(torch.device('cpu'), 500)
+    #samples = sample_sphere_monte_carlo(torch.device('cpu'), 500)
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(samples[:,0], samples[:,1], samples[:,2])
+    plt.show()
