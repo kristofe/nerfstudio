@@ -125,13 +125,17 @@ def generate_spherical_harmonics_grid(
     nears = torch.zeros((num_rays, 1), device=pipeline.device)
     fars = torch.zeros((num_rays, 1), device=pipeline.device)
     camera_indices = torch.zeros((num_rays, 1), dtype=torch.long, device=pipeline.device)
+    sh_coeffs = torch.zeros((num_rays, 3, 4), device=pipeline.device)
 
+    sh_indices = [[0,0,0], [1, 1,-1], [2, 1,0], [3, 1,1]]
     with progress as progress_bar:
         task = progress_bar.add_task("Computing Spherical Harmonics Cloud", total=num_directions)
-        for i in range(num_directions):
+        random_directions = sample_sphere_monte_carlo(pipeline.device, num_directions)
+        counter = 0
+        for rand_direction in random_directions:
             #random uniform directions
-            random_vector = torch.rand((1,3), device=pipeline.device) * 2.0 - 1.0  #move from [0,1] to [-1, 1] 
-            rand_direction = random_vector / torch.linalg.norm(random_vector, dim=1, keepdim=True)
+            #random_vector = torch.rand((1,3), device=pipeline.device) * 2.0 - 1.0  #move from [0,1] to [-1, 1] 
+            #rand_direction = random_vector / torch.linalg.norm(random_vector, dim=1, keepdim=True)
 
             view_directions = torch.ones((num_rays, 3), device=pipeline.device)
             view_directions = view_directions * rand_direction
@@ -145,10 +149,21 @@ def generate_spherical_harmonics_grid(
 
             rgba = pipeline.model.get_rgba_image(outputs, rgb_output_name)
             rgbs = rgba[..., :3]
+
+            #Calculate the SH Coefficients
+            for idx, l, m in sh_indices:
+                sh = project_sh(L = l, M = m, n = view_directions) 
+                for color_idx in range(3):
+                    sh_coeffs[:,color_idx,idx] += sh * rgbs[:,color_idx]
+
             results.append(rgbs)
             progress.advance(task, 1)
+            counter += 1
     rgbs_mean = torch.stack(results, dim=0).mean(dim=0)
-        
+
+    #CHECK THAT THIS IS CORRECT
+    sh_coeffs = sh_coeffs / num_directions
+    
     import open3d as o3d
 
     pcd = o3d.geometry.PointCloud()
@@ -156,7 +171,7 @@ def generate_spherical_harmonics_grid(
     pcd.colors = o3d.utility.Vector3dVector(rgbs_mean.double().cpu().numpy())
 
     CONSOLE.print("[bold green]:white_check_mark: Done Computing Spherical Harmonics Cloud")
-    return pcd
+    return pcd, sh_coeffs
 
 def generate_point_cloud(
     pipeline: Pipeline,
@@ -447,12 +462,13 @@ def sample_sphere_low_discrepancy(device : torch.device, num_samples : int = 409
     # YES THIS CAN BE VECTORIZED... FIRST LETS MAKE SURE IT IS CORRECT!!!!!
     samples = torch.zeros(num_samples, 3, device = device)
     for i in range(1,num_samples + 1):
-        ii = i -1
         theta = math.acos(1 - i / num_samples)
         phi = Phi*i
-        samples[ii, 0] = math.cos(phi)*math.sin(theta)
-        samples[ii, 1] = math.sin(phi)*math.sin(theta)
-        samples[ii, 2] = math.cos(theta)
+        #theta = math.acos(1 - 2 * i / num_samples)
+        #phi = Phi*i*0.5
+        samples[i-1, 0] = math.cos(phi)*math.sin(theta)
+        samples[i-1, 1] = math.sin(phi)*math.sin(theta)
+        samples[i-1, 2] = math.cos(theta)
     samples = torch.cat((samples, samples*-1), 0)
     return samples
 
@@ -480,7 +496,7 @@ def sample_sphere_monte_carlo(device : torch.device, num_samples : int = 4096):
         samples[i, 2] = math.sin(b) * sinTheta
     return samples
 
-def project_sh(L : int , M : int, n : torch.FloatTensor):
+def project_sh(L : int , M : int, n : torch.Tensor):
     '''
     __host__ __device__ __forceinline__ float Project(const vec3& n, const int L, const int M)
     {

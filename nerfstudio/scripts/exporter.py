@@ -150,7 +150,7 @@ class ExportSphericalHarmonicsGrid(Exporter):
         crop_obb = None
         if self.obb_center is not None and self.obb_rotation is not None and self.obb_scale is not None:
             crop_obb = OrientedBox.from_params(self.obb_center, self.obb_rotation, self.obb_scale)
-        pcd = generate_spherical_harmonics_grid(
+        pcd, sh_coeffs = generate_spherical_harmonics_grid(
             pipeline=pipeline,
             num_directions=self.num_directions,
             grid_res=self.grid_res,
@@ -180,6 +180,10 @@ class ExportSphericalHarmonicsGrid(Exporter):
         # let us do the same to save space.
         tpcd.point.colors = (tpcd.point.colors * 255).to(o3d.core.Dtype.UInt8)  # type: ignore
         o3d.t.io.write_point_cloud(str(self.output_dir / "sh cloud.ply"), tpcd)
+
+        output_points = np.asarray(pcd.points)
+        grid_resolution = np.array([self.grid_res, self.grid_res, self.grid_res])
+        np.savez(str(self.output_dir / "sh_coeffs.npz"), grid_resolution=grid_resolution, sh_coeffs=sh_coeffs.cpu().numpy(), points=output_points)
         print("\033[A\033[A")
         CONSOLE.print("[bold green]:white_check_mark: Saving SH Cloud")
 
