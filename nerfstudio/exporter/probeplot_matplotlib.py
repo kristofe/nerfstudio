@@ -79,8 +79,10 @@ coefficients_grid_layout = probegrid.coefficients.reshape((channels, res[2], res
 #print(f'coefficients_grid_layout.shape: {coefficients_grid_layout.shape}')
 '''
 
-grid_x = 8 #res[0]
-grid_y = 8 #res[1]
+grid_x = grid_resolution[0]
+grid_y = grid_resolution[1]
+
+sh_coeffs = sh_coeffs.reshape((grid_resolution[0], grid_resolution[1], grid_resolution[2],3,4))
 
 # setup figure/plot grid
 figsize_px, DPI = 800, 100
@@ -88,9 +90,11 @@ figsize_in = figsize_px / DPI
 fig = plt.figure(figsize=(figsize_in, figsize_in), dpi=DPI)
 spec = gridspec.GridSpec(ncols=grid_x, nrows=grid_y, figure=fig)
 
+zz = grid_resolution[2] // 2 # middle slice
 for yy in range(grid_y):
     for xx in range(grid_x):
-        coeffs = sh_coeffs[:,0,yy,xx,:]
+        #coeffs = sh_coeffs[:,0,yy,xx,:]
+        coeffs = sh_coeffs[xx,yy,zz,:,:]
         #f = calculate_total_sh(coeffs, normalized=True)
 
         #TODO: CONFIRM THIS IS CORRECT

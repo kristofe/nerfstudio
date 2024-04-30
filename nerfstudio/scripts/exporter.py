@@ -98,7 +98,7 @@ class ExportSphericalHarmonicsGrid(Exporter):
     """Number of directions to sample per grid point for Spherical Harmonics calculation."""
     num_directions: int = 1024
     """Number of grid points per axis for the SH grid."""
-    grid_res: int = 16
+    grid_res: int = 4
     """Remove outliers from the SH cloud."""
     normal_method: Literal["open3d", "model_output"] = "model_output"
     """Method to estimate normals with."""
