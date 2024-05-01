@@ -462,14 +462,14 @@ def sample_sphere_low_discrepancy(device : torch.device, num_samples : int = 409
     # YES THIS CAN BE VECTORIZED... FIRST LETS MAKE SURE IT IS CORRECT!!!!!
     samples = torch.zeros(num_samples, 3, device = device)
     for i in range(1,num_samples + 1):
-        theta = math.acos(1 - i / num_samples)
+        #theta = math.acos(1 - i / num_samples)
         phi = Phi*i
-        #theta = math.acos(1 - 2 * i / num_samples)
+        theta = math.acos(1 - 2 * i / num_samples)
         #phi = Phi*i*0.5
         samples[i-1, 0] = math.cos(phi)*math.sin(theta)
         samples[i-1, 1] = math.sin(phi)*math.sin(theta)
         samples[i-1, 2] = math.cos(theta)
-    samples = torch.cat((samples, samples*-1), 0)
+    #samples = torch.cat((samples, samples*-1), 0)
     return samples
 
 
